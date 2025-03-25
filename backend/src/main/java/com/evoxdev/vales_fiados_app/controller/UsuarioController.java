@@ -1,8 +1,7 @@
 package com.evoxdev.vales_fiados_app.controller;
 
-import com.evoxdev.vales_fiados_app.entity.Usuario;
-import com.evoxdev.vales_fiados_app.repository.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.evoxdev.vales_fiados_app.dto.UsuarioDTO;
+import com.evoxdev.vales_fiados_app.service.UsuarioService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,15 +9,20 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioService usuarioService;
+
+    public UsuarioController(UsuarioService usuarioService) {
+        this.usuarioService = usuarioService;
+    }
 
     @PostMapping("/cadastrar")
-    public ResponseEntity<?> cadastrarUsuario(@RequestBody Usuario usuario) {
-        if (usuarioRepository.existsByCpf(usuario.getCpf())) {
-            return ResponseEntity.badRequest().body("CPF já cadastrado.");
+    public ResponseEntity<?> cadastrarUsuario(@RequestBody UsuarioDTO usuarioDTO) {
+        try {
+            usuarioService.cadastrarUsuario(usuarioDTO);
+            return ResponseEntity.ok("Usuário cadastrado com sucesso!");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-        Usuario novoUsuario = usuarioRepository.save(usuario);
-        return ResponseEntity.ok(novoUsuario);
     }
+
 }
