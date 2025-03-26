@@ -23,4 +23,27 @@ public class JwtTokenProvider {
                 .signWith(jwtKey) // Usar a chave gerada automaticamente
                 .compact();
     }
+
+    // Adicione este método para validar tokens
+    public String getUsernameFromToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(jwtKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+
+    // Adicione este método para verificar se o token é válido
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(jwtKey)
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }
