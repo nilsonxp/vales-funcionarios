@@ -21,12 +21,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())  // Desabilita CSRF para APIs REST
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/usuarios/cadastrar").permitAll()  // Permite acesso ao endpoint de cadastro
-                        .anyRequest().authenticated()  // Outras requisições precisam de autenticação
+                        .requestMatchers("/api/auth/login").permitAll()  // Adicione esta linha
+                        .requestMatchers("/api/usuarios/cadastrar").permitAll()
+                        .anyRequest().authenticated()
                 )
-                .httpBasic(withDefaults());  // Usa autenticação básica HTTP
+                .httpBasic(withDefaults());
 
         return http.build();
     }
