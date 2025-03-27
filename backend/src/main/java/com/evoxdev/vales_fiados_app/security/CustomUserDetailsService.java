@@ -24,13 +24,11 @@ public class CustomUserDetailsService implements UserDetailsService {
         Usuario usuario = usuarioRepository.findByCpf(cpf)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado com CPF: " + cpf));
 
-        // Para debugging - adicione este log para verificar qual role está vindo do banco
         System.out.println("Role do usuário: " + usuario.getRole());
 
-        // Use authorities() em vez de roles() para ter mais controle sobre o formato
         return User.withUsername(usuario.getCpf())
                 .password(usuario.getSenha())
-                .authorities("ROLE_" + usuario.getRole())  // Adiciona o prefixo ROLE_ explicitamente
+                .authorities("ROLE_" + usuario.getRole())
                 .build();
     }
 }

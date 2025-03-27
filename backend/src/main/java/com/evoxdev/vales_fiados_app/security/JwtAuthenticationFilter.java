@@ -43,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
-            logger.error("Não foi possível autenticar o usuário", e); // Passa a exceção como segundo argumento
+            logger.error("Não foi possível autenticar o usuário", e);
         }
 
         filterChain.doFilter(request, response);
