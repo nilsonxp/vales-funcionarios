@@ -1,11 +1,13 @@
 package com.evoxdev.vales_fiados_app.service;
 
 import com.evoxdev.vales_fiados_app.dto.NotificacaoDTO;
+import com.evoxdev.vales_fiados_app.dto.WebSocketMessage;
 import com.evoxdev.vales_fiados_app.entity.Notificacao;
 import com.evoxdev.vales_fiados_app.entity.Usuario;
 import com.evoxdev.vales_fiados_app.mapper.NotificacaoMapper;
 import com.evoxdev.vales_fiados_app.repository.NotificacaoRepository;
 import com.evoxdev.vales_fiados_app.repository.UsuarioRepository;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,17 +20,20 @@ public class NotificacaoService {
     private final NotificacaoRepository notificacaoRepository;
     private final UsuarioRepository usuarioRepository;
     private final NotificacaoMapper notificacaoMapper;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public NotificacaoService(NotificacaoRepository notificacaoRepository,
                               UsuarioRepository usuarioRepository,
-                              NotificacaoMapper notificacaoMapper) {
+                              NotificacaoMapper notificacaoMapper,
+                              SimpMessagingTemplate messagingTemplate) {
         this.notificacaoRepository = notificacaoRepository;
         this.usuarioRepository = usuarioRepository;
         this.notificacaoMapper = notificacaoMapper;
+        this.messagingTemplate = messagingTemplate;
     }
 
     /**
-     * Cria uma nova notificação para um usuário
+     * Cria uma nova notificação para um usuário e envia via WebSocket
      */
     @Transactional
     public NotificacaoDTO criarNotificacao(String cpf, String mensagem, String tipoNotificacao) {
@@ -43,12 +48,20 @@ public class NotificacaoService {
         notificacao.setTipoNotificacao(tipoNotificacao);
 
         notificacao = notificacaoRepository.save(notificacao);
-        return notificacaoMapper.toDTO(notificacao);
+        NotificacaoDTO notificacaoDTO = notificacaoMapper.toDTO(notificacao);
+
+        // Enviar notificação em tempo real para o usuário específico
+        WebSocketMessage wsMessage = new WebSocketMessage("NOTIFICACAO", notificacaoDTO);
+        messagingTemplate.convertAndSendToUser(
+                cpf,  // o nome de usuário para STOMP é o CPF do usuário
+                "/queue/notificacoes",
+                wsMessage
+        );
+
+        return notificacaoDTO;
     }
 
-    /**
-     * Lista todas as notificações de um usuário
-     */
+    // Resto dos métodos permanece igual...
     @Transactional(readOnly = true)
     public List<NotificacaoDTO> listarTodasNotificacoes(String cpf) {
         Usuario usuario = usuarioRepository.findByCpf(cpf)
@@ -58,9 +71,6 @@ public class NotificacaoService {
         return notificacaoMapper.toDTOList(notificacoes);
     }
 
-    /**
-     * Lista apenas notificações não lidas de um usuário
-     */
     @Transactional(readOnly = true)
     public List<NotificacaoDTO> listarNotificacoesNaoLidas(String cpf) {
         Usuario usuario = usuarioRepository.findByCpf(cpf)
@@ -70,27 +80,30 @@ public class NotificacaoService {
         return notificacaoMapper.toDTOList(notificacoes);
     }
 
-    /**
-     * Marca uma notificação específica como lida
-     */
     @Transactional
     public NotificacaoDTO marcarComoLida(Long id, String cpfUsuario) {
         Notificacao notificacao = notificacaoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Notificação não encontrada"));
 
-        // Verificar se a notificação pertence ao usuário
         if (!notificacao.getUsuario().getCpf().equals(cpfUsuario)) {
             throw new RuntimeException("Esta notificação não pertence ao usuário autenticado");
         }
 
         notificacao.setLida(true);
         notificacao = notificacaoRepository.save(notificacao);
-        return notificacaoMapper.toDTO(notificacao);
+
+        // Enviar atualização em tempo real
+        NotificacaoDTO notificacaoDTO = notificacaoMapper.toDTO(notificacao);
+        WebSocketMessage wsMessage = new WebSocketMessage("NOTIFICACAO_LIDA", notificacaoDTO);
+        messagingTemplate.convertAndSendToUser(
+                cpfUsuario,
+                "/queue/notificacoes",
+                wsMessage
+        );
+
+        return notificacaoDTO;
     }
 
-    /**
-     * Marca todas as notificações de um usuário como lidas
-     */
     @Transactional
     public void marcarTodasComoLidas(String cpf) {
         Usuario usuario = usuarioRepository.findByCpf(cpf)
@@ -100,11 +113,16 @@ public class NotificacaoService {
 
         notificacoes.forEach(notificacao -> notificacao.setLida(true));
         notificacaoRepository.saveAll(notificacoes);
+
+        // Enviar atualização em tempo real
+        WebSocketMessage wsMessage = new WebSocketMessage("TODAS_NOTIFICACOES_LIDAS", null);
+        messagingTemplate.convertAndSendToUser(
+                cpf,
+                "/queue/notificacoes",
+                wsMessage
+        );
     }
 
-    /**
-     * Conta o número de notificações não lidas
-     */
     @Transactional(readOnly = true)
     public long contarNotificacoesNaoLidas(String cpf) {
         Usuario usuario = usuarioRepository.findByCpf(cpf)
