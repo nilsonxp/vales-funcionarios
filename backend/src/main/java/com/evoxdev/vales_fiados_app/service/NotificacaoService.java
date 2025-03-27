@@ -21,22 +21,32 @@ public class NotificacaoService {
     private final UsuarioRepository usuarioRepository;
     private final NotificacaoMapper notificacaoMapper;
     private final SimpMessagingTemplate messagingTemplate;
+    private final PreferenciasNotificacaoService preferenciasService;
 
-    public NotificacaoService(NotificacaoRepository notificacaoRepository,
-                              UsuarioRepository usuarioRepository,
-                              NotificacaoMapper notificacaoMapper,
-                              SimpMessagingTemplate messagingTemplate) {
+    public NotificacaoService(
+            NotificacaoRepository notificacaoRepository,
+            UsuarioRepository usuarioRepository,
+            NotificacaoMapper notificacaoMapper,
+            SimpMessagingTemplate messagingTemplate,
+            PreferenciasNotificacaoService preferenciasService) {
         this.notificacaoRepository = notificacaoRepository;
         this.usuarioRepository = usuarioRepository;
         this.notificacaoMapper = notificacaoMapper;
         this.messagingTemplate = messagingTemplate;
+        this.preferenciasService = preferenciasService;
     }
 
     /**
      * Cria uma nova notificação para um usuário e envia via WebSocket
+     * Verifica as preferências do usuário antes de criar a notificação
      */
     @Transactional
     public NotificacaoDTO criarNotificacao(String cpf, String mensagem, String tipoNotificacao) {
+        // Verificar se o usuário permite receber este tipo de notificação
+        if (!preferenciasService.deveReceberNotificacao(cpf, tipoNotificacao)) {
+            return null; // Não criar notificação se o usuário desativou este tipo
+        }
+
         Usuario usuario = usuarioRepository.findByCpf(cpf)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
@@ -61,7 +71,7 @@ public class NotificacaoService {
         return notificacaoDTO;
     }
 
-    // Resto dos métodos permanece igual...
+    // Resto dos métodos permanece o mesmo do que já implementamos antes
     @Transactional(readOnly = true)
     public List<NotificacaoDTO> listarTodasNotificacoes(String cpf) {
         Usuario usuario = usuarioRepository.findByCpf(cpf)
