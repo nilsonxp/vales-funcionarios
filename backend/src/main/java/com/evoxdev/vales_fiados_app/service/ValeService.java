@@ -9,7 +9,6 @@ import com.evoxdev.vales_fiados_app.repository.ValeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -21,17 +20,21 @@ public class ValeService {
     private final UsuarioRepository usuarioRepository;
     private final ValeMapper valeMapper;
     private final NotificacaoService notificacaoService;
+    private final AuditoriaService auditoriaService;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    public ValeService(ValeRepository valeRepository,
-                       UsuarioRepository usuarioRepository,
-                       ValeMapper valeMapper,
-                       NotificacaoService notificacaoService) {
+    public ValeService(
+            ValeRepository valeRepository,
+            UsuarioRepository usuarioRepository,
+            ValeMapper valeMapper,
+            NotificacaoService notificacaoService,
+            AuditoriaService auditoriaService) {
         this.valeRepository = valeRepository;
         this.usuarioRepository = usuarioRepository;
         this.valeMapper = valeMapper;
         this.notificacaoService = notificacaoService;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional
@@ -51,6 +54,23 @@ public class ValeService {
         vale.setCriadoPor(criadoPor);
 
         vale = valeRepository.save(vale);
+
+        // Registrar na auditoria
+        String detalhes = String.format(
+                "Valor: R$ %s, Descrição: %s, Usuário: %s (CPF: %s)",
+                vale.getValor().toString(),
+                vale.getDescricao(),
+                usuario.getNome(),
+                usuario.getCpf()
+        );
+
+        auditoriaService.registrarAcao(
+                "CRIAR_VALE",
+                "Vale criado por " + criadoPor.getNome(),
+                "Vale",
+                vale.getId(),
+                detalhes
+        );
 
         // Criar notificação para o usuário
         String valorFormatado = vale.getValor().toString();
@@ -74,7 +94,18 @@ public class ValeService {
     public List<ValeDTO> listarDTOsPorUsuario(String cpf) {
         Usuario usuario = usuarioRepository.findByCpf(cpf)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
         List<Vale> vales = valeRepository.findByUsuario(usuario);
+
+        // Registrar na auditoria
+        auditoriaService.registrarAcao(
+                "CONSULTAR_VALES",
+                "Consulta de vales pelo usuário " + usuario.getNome(),
+                "Usuario",
+                usuario.getId(),
+                "CPF: " + cpf + ", Quantidade de vales: " + vales.size()
+        );
+
         return valeMapper.toDTOList(vales);
     }
 
@@ -87,6 +118,24 @@ public class ValeService {
         vale.setQuitadoEm(LocalDateTime.now());
 
         vale = valeRepository.save(vale);
+
+        // Registrar na auditoria
+        String detalhes = String.format(
+                "Valor: R$ %s, Descrição: %s, Usuário: %s (CPF: %s), Data de quitação: %s",
+                vale.getValor().toString(),
+                vale.getDescricao(),
+                vale.getUsuario().getNome(),
+                vale.getUsuario().getCpf(),
+                vale.getQuitadoEm().format(DATE_FORMATTER)
+        );
+
+        auditoriaService.registrarAcao(
+                "QUITAR_VALE",
+                "Vale marcado como pago",
+                "Vale",
+                vale.getId(),
+                detalhes
+        );
 
         // Criar notificação para o usuário
         String valorFormatado = vale.getValor().toString();
