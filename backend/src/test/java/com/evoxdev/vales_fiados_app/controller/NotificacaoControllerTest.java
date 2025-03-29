@@ -1,7 +1,7 @@
+
 package com.evoxdev.vales_fiados_app.controller;
 
 import com.evoxdev.vales_fiados_app.dto.NotificacaoDTO;
-import com.evoxdev.vales_fiados_app.security.CustomUserDetailsService;
 import com.evoxdev.vales_fiados_app.security.JwtAuthenticationFilter;
 import com.evoxdev.vales_fiados_app.security.JwtTokenProvider;
 import com.evoxdev.vales_fiados_app.service.NotificacaoService;
@@ -11,10 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.config.annotation.web.WebSecurityConfigurer;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,7 +26,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -38,12 +36,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = NotificacaoController.class,
-        excludeFilters = {
-                @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
-                        classes = WebSecurityConfigurer.class)
-        }
-)
+// Configuração atualizada para Spring Boot 3.x
+@WebMvcTest(NotificacaoController.class)
+@Import({JwtAuthenticationFilter.class, JwtTokenProvider.class})
 public class NotificacaoControllerTest {
 
     @Autowired
@@ -52,18 +47,12 @@ public class NotificacaoControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    // Usando @MockBean ao invés da anotação deprecada
     @MockBean
     private NotificacaoService notificacaoService;
 
-    // Mocks necessários para o contexto de segurança
     @MockBean
-    private CustomUserDetailsService userDetailsService;
-
-    @MockBean
-    private JwtTokenProvider jwtTokenProvider;
-
-    @MockBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    private UserDetailsService userDetailsService;
 
     private NotificacaoDTO notificacaoDTO;
     private List<NotificacaoDTO> notificacaoDTOs;
