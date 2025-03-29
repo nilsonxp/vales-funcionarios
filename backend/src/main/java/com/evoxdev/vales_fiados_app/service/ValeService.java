@@ -3,6 +3,8 @@ package com.evoxdev.vales_fiados_app.service;
 import com.evoxdev.vales_fiados_app.dto.ValeDTO;
 import com.evoxdev.vales_fiados_app.entity.Usuario;
 import com.evoxdev.vales_fiados_app.entity.Vale;
+import com.evoxdev.vales_fiados_app.exception.NegocioException;
+import com.evoxdev.vales_fiados_app.exception.RecursoNaoEncontradoException;
 import com.evoxdev.vales_fiados_app.mapper.ValeMapper;
 import com.evoxdev.vales_fiados_app.repository.UsuarioRepository;
 import com.evoxdev.vales_fiados_app.repository.ValeRepository;
@@ -40,10 +42,19 @@ public class ValeService {
     @Transactional
     public ValeDTO criarVale(String cpf, ValeDTO dto, String criadoPorCpf) {
         Usuario usuario = usuarioRepository.findByCpf(cpf)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado com CPF: " + cpf));
 
         Usuario criadoPor = usuarioRepository.findByCpf(criadoPorCpf)
-                .orElseThrow(() -> new RuntimeException("Administrador não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Administrador não encontrado com CPF: " + criadoPorCpf));
+
+        // Validação adicional
+        if (dto.getValor() == null || dto.getValor().signum() <= 0) {
+            throw new NegocioException("O valor do vale deve ser maior que zero");
+        }
+
+        if (dto.getDescricao() == null || dto.getDescricao().trim().isEmpty()) {
+            throw new NegocioException("A descrição do vale é obrigatória");
+        }
 
         Vale vale = new Vale();
         vale.setUsuario(usuario);
@@ -93,7 +104,7 @@ public class ValeService {
     @Transactional(readOnly = true)
     public List<ValeDTO> listarDTOsPorUsuario(String cpf) {
         Usuario usuario = usuarioRepository.findByCpf(cpf)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado com CPF: " + cpf));
 
         List<Vale> vales = valeRepository.findByUsuario(usuario);
 
@@ -112,7 +123,12 @@ public class ValeService {
     @Transactional
     public ValeDTO marcarComoPago(Long id) {
         Vale vale = valeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Vale não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Vale não encontrado com ID: " + id));
+
+        // Validação de regra de negócio
+        if (vale.isPago()) {
+            throw new NegocioException("Este vale já está marcado como pago");
+        }
 
         vale.setPago(true);
         vale.setQuitadoEm(LocalDateTime.now());
