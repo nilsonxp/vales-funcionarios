@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @DataJpaTest
+@ActiveProfiles("test")
 public class ValeRepositoryTest {
 
     @Autowired
@@ -91,12 +93,12 @@ public class ValeRepositoryTest {
         Vale primeiroVale = valesUsuario1.get(0);
         assertNotNull(primeiroVale.getId());
         assertEquals("Vale 1 do usuário 1", primeiroVale.getDescricao());
-        assertEquals(new BigDecimal("100.00"), primeiroVale.getValor());
+        assertEquals(new BigDecimal("100.00").setScale(2), primeiroVale.getValor().setScale(2));
         assertEquals(false, primeiroVale.isPago());
 
         // Verificar o vale do usuário 2
         Vale valeUsuario2 = valesUsuario2.get(0);
         assertEquals("Vale do usuário 2", valeUsuario2.getDescricao());
-        assertEquals(new BigDecimal("150.00"), valeUsuario2.getValor());
+        assertEquals(new BigDecimal("150.00").setScale(2), valeUsuario2.getValor().setScale(2));
     }
 }

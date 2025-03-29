@@ -8,12 +8,12 @@ import com.evoxdev.vales_fiados_app.exception.RecursoNaoEncontradoException;
 import com.evoxdev.vales_fiados_app.mapper.ValeMapper;
 import com.evoxdev.vales_fiados_app.repository.UsuarioRepository;
 import com.evoxdev.vales_fiados_app.repository.ValeRepository;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 public class ValeServiceTest {
 
     @Mock
@@ -47,7 +48,6 @@ public class ValeServiceTest {
     @InjectMocks
     private ValeService valeService;
 
-    private AutoCloseable closeable;
     private Usuario usuario;
     private Usuario admin;
     private Vale vale;
@@ -55,8 +55,6 @@ public class ValeServiceTest {
 
     @BeforeEach
     void setUp() {
-        closeable = MockitoAnnotations.openMocks(this);
-
         // Configurar objetos para testes
         usuario = new Usuario();
         usuario.setId(1L);
@@ -84,11 +82,6 @@ public class ValeServiceTest {
         valeDTO.setDescricao("Teste de vale");
         valeDTO.setValor(new BigDecimal("100.00"));
         valeDTO.setQuitado(false);
-    }
-
-    @AfterEach
-    void tearDown() throws Exception {
-        closeable.close();
     }
 
     @Test
@@ -135,7 +128,7 @@ public class ValeServiceTest {
         when(usuarioRepository.findByCpf(anyString())).thenReturn(Optional.empty());
 
         // When/Then
-        assertThrows(RuntimeException.class, () -> {
+        assertThrows(RecursoNaoEncontradoException.class, () -> {
             valeService.listarDTOsPorUsuario("cpf-inexistente");
         });
 
